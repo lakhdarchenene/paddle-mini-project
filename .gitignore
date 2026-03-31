@@ -13,6 +13,8 @@ __pycache__/
 
 # ── Runtime data (user uploads & generated results) ──
 # uploads and results are tracked intentionally
+# Exclude known oversized files (>5 MB) that cause push timeouts
+uploads/6b9c00a2c0014c41b54f5d1014463c55.png
 
 # ── PaddleOCR model cache ─────────────────────────────
 ~/.paddleocr/
