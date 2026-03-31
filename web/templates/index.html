@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reconstruction IA — Documents Administratifs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+
+<!-- ── Navbar ─────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <span class="nav-icon">🔬</span>
+    <div>
+      <div class="nav-title">Reconstruction IA</div>
+      <div class="nav-sub">Documents Administratifs</div>
+    </div>
+  </div>
+  <div class="nav-badges">
+    <span class="badge badge-blue">PaddleOCR 2.7</span>
+    <span class="badge badge-purple">Flask API</span>
+    <span class="badge badge-green" id="status-badge">● Prêt</span>
+  </div>
+</nav>
+
+<!-- ── Main ───────────────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- Upload Section -->
+  <section class="upload-section">
+    <div class="section-header">
+      <h1>📄 Analyser un Document</h1>
+      <p>Déposez une image de document administratif pour extraire et reconstruire sa structure automatiquement</p>
+    </div>
+
+    <div class="upload-zone" id="uploadZone">
+      <div class="upload-content">
+        <div class="upload-icon" id="uploadIcon">📁</div>
+        <div class="upload-text" id="uploadText">
+          <strong>Glissez-déposez votre image ici</strong>
+          <span>ou cliquez pour parcourir</span>
+        </div>
+        <div class="upload-hint">PNG, JPG, JPEG, BMP, TIFF • Max 20 MB</div>
+        <button class="btn-upload" id="browseBtn">Choisir un fichier</button>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" hidden/>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-box" id="previewBox" style="display:none">
+      <img id="previewImg" src="" alt="Aperçu"/>
+      <div class="preview-info">
+        <span id="previewName" class="preview-name"></span>
+        <button class="btn-analyze" id="analyzeBtn">🚀 Analyser maintenant</button>
+        <button class="btn-clear" id="clearBtn">✕ Annuler</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Loading -->
+  <div class="loading-overlay" id="loadingOverlay" style="display:none">
+    <div class="loading-card">
+      <div class="spinner"></div>
+      <div class="loading-title">Analyse en cours…</div>
+      <div class="loading-steps" id="loadingSteps">
+        <div class="step active" id="step1">🔍 Détection du texte</div>
+        <div class="step"        id="step2">🧠 Reconnaissance OCR</div>
+        <div class="step"        id="step3">🗂️ Reconstruction de structure</div>
+        <div class="step"        id="step4">🎨 Génération du résultat</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Bar (hidden until results) -->
+  <div class="stats-bar" id="statsBar" style="display:none">
+    <div class="stat-card">
+      <div class="stat-icon">📦</div>
+      <div class="stat-value" id="statTotal">—</div>
+      <div class="stat-label">Blocs détectés</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🎯</div>
+      <div class="stat-value" id="statConf">—</div>
+      <div class="stat-label">Confiance moyenne</div>
+    </div>
+    <div class="stat-card zone-header-card">
+      <div class="stat-icon">🔴</div>
+      <div class="stat-value" id="statHeader">—</div>
+      <div class="stat-label">En-tête</div>
+    </div>
+    <div class="stat-card zone-body-card">
+      <div class="stat-icon">🟢</div>
+      <div class="stat-value" id="statBody">—</div>
+      <div class="stat-label">Corps</div>
+    </div>
+    <div class="stat-card zone-footer-card">
+      <div class="stat-icon">🔵</div>
+      <div class="stat-value" id="statFooter">—</div>
+      <div class="stat-label">Pied de page</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🕐</div>
+      <div class="stat-value" id="statTime" style="font-size:0.85rem">—</div>
+      <div class="stat-label">Traité le</div>
+    </div>
+  </div>
+
+  <!-- Results Section (hidden until results) -->
+  <section class="results-section" id="resultsSection" style="display:none">
+
+    <!-- Image comparison -->
+    <div class="images-row">
+      <div class="img-card">
+        <div class="img-card-header">
+          <span>📄 Document Original</span>
+        </div>
+        <div class="img-card-body">
+          <img id="originalImg" src="" alt="Original"/>
+        </div>
+      </div>
+      <div class="img-card">
+        <div class="img-card-header">
+          <span>🔬 Résultat Annoté</span>
+          <a id="downloadBtn" href="#" download class="download-btn">⬇ Télécharger</a>
+        </div>
+        <div class="img-card-body">
+          <img id="resultImg" src="" alt="Résultat"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone legend -->
+    <div class="legend-row">
+      <div class="legend-item"><span class="dot dot-red"></span> En-tête</div>
+      <div class="legend-item"><span class="dot dot-green"></span> Corps</div>
+      <div class="legend-item"><span class="dot dot-blue"></span> Pied de page</div>
+    </div>
+
+    <!-- Text per zone -->
+    <div class="zones-row">
+      <div class="zone-card zone-header">
+        <div class="zone-title">🔴 En-tête</div>
+        <div class="zone-blocks" id="headerBlocks"></div>
+      </div>
+      <div class="zone-card zone-body">
+        <div class="zone-title">🟢 Corps du document</div>
+        <div class="zone-blocks" id="bodyBlocks"></div>
+      </div>
+      <div class="zone-card zone-footer">
+        <div class="zone-title">🔵 Pied de page</div>
+        <div class="zone-blocks" id="footerBlocks"></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- History -->
+  <section class="history-section" id="historySection">
+    <div class="section-header">
+      <h2>🕐 Historique des analyses</h2>
+      <button class="btn-refresh" id="refreshHistory" onclick="loadHistory()">↻ Actualiser</button>
+    </div>
+    <div class="history-grid" id="historyGrid">
+      <div class="history-empty">Aucune analyse effectuée</div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ── Toast ───────────────────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>

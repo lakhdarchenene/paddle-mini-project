@@ -1,0 +1,37 @@
+# ── Virtual environment ──────────────────────────────
+paddle_env/
+venv/
+.venv/
+env/
+
+# ── Python cache ─────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── Runtime data (user uploads & generated results) ──
+uploads/*
+!uploads/.gitkeep
+results/*
+!results/.gitkeep
+
+# ── PaddleOCR model cache ─────────────────────────────
+~/.paddleocr/
+.paddleocr/
+inference/
+
+# ── OS / Editor ───────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# ── Misc ─────────────────────────────────────────────
+*.log
+*.egg-info/
+dist/
+build/
