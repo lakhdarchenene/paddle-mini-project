@@ -12,10 +12,7 @@ __pycache__/
 .Python
 
 # ── Runtime data (user uploads & generated results) ──
-uploads/*
-!uploads/.gitkeep
-results/*
-!results/.gitkeep
+# uploads and results are tracked intentionally
 
 # ── PaddleOCR model cache ─────────────────────────────
 ~/.paddleocr/
