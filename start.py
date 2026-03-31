@@ -1,10 +1,10 @@
 """
-start.py  —  Lanceur du projet Reconstruction IA
-=================================================
+start.py - Lanceur du projet Reconstruction IA
+===============================================
 Usage :  python start.py
-         python start.py --no-browser   (ne pas ouvrir le navigateur)
-         python start.py --port 8080    (port personnalisé)
-=================================================
+         python start.py --no-browser   (do not open browser)
+         python start.py --port 8080    (custom port)
+===============================================
 """
 
 import os
@@ -16,12 +16,17 @@ import webbrowser
 import subprocess
 import platform
 
+# Ensure stdout uses UTF-8 on Windows to avoid cp1252 issues
+if platform.system() == "Windows":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+
 # ── Project root & virtual-env Python ───────────────────────────────────────
 ROOT    = os.path.dirname(os.path.abspath(__file__))
 VENV_PY = os.path.join(ROOT, "paddle_env", "Scripts", "python.exe")
 PYTHON  = VENV_PY if os.path.exists(VENV_PY) else sys.executable
 
-# ── ANSI colors (works on Windows 10 + PowerShell / CMD with VT support) ────
+# ── ANSI colors ──────────────────────────────────────────────────────────────
 def _enable_color():
     if platform.system() == "Windows":
         try:
@@ -34,7 +39,7 @@ def _enable_color():
 
 USE_COLOR = _enable_color()
 
-def _c(text, code):  return f"\033[{code}m{text}\033[0m" if USE_COLOR else text
+def _c(text, code): return f"\033[{code}m{text}\033[0m" if USE_COLOR else text
 def bold(t):   return _c(t, "1")
 def cyan(t):   return _c(t, "36")
 def green(t):  return _c(t, "32")
@@ -44,19 +49,20 @@ def dim(t):    return _c(t, "2")
 
 # ── Banner ───────────────────────────────────────────────────────────────────
 def print_banner(port):
-    url = f"http://localhost:{port}"
+    url  = f"http://localhost:{port}"
+    line = "-" * 52
     print()
-    print(cyan("  ╔══════════════════════════════════════════════════════╗"))
-    print(cyan("  ║") + bold("   🤖  Reconstruction IA — Documents Administratifs   ") + cyan("║"))
-    print(cyan("  ║") + dim("         PaddleOCR 2.7  ·  Flask  ·  Python           ") + cyan("║"))
-    print(cyan("  ╚══════════════════════════════════════════════════════╝"))
+    print(cyan(f"  +{line}+"))
+    print(cyan("  |") + bold("   Reconstruction IA - Documents Administratifs   ") + cyan("  |"))
+    print(cyan("  |") + dim("      PaddleOCR 2.7  .  Flask  .  Python           ") + cyan("  |"))
+    print(cyan(f"  +{line}+"))
     print()
-    print(f"  {bold('Python  :')} {dim(PYTHON)}")
-    print(f"  {bold('URL     :')} {green(url)}")
-    print(f"  {bold('Arrêt   :')} {yellow('Ctrl+C')}")
+    print(f"  {bold('Python :')} {dim(PYTHON)}")
+    print(f"  {bold('URL    :')} {green(url)}")
+    print(f"  {bold('Stop   :')} {yellow('Ctrl+C')}")
     print()
 
-# ── Wait for the server to be ready ─────────────────────────────────────────
+# ── Wait for server to be ready ──────────────────────────────────────────────
 def wait_for_server(port, timeout=20):
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -70,13 +76,12 @@ def wait_for_server(port, timeout=20):
 # ── Main ─────────────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description="Lance le serveur web Reconstruction IA")
-    parser.add_argument("--port",       type=int, default=5000, help="Port HTTP (défaut: 5000)")
-    parser.add_argument("--no-browser", action="store_true",    help="Ne pas ouvrir le navigateur")
+    parser.add_argument("--port",       type=int, default=5000, help="Port HTTP (default: 5000)")
+    parser.add_argument("--no-browser", action="store_true",    help="Do not open the browser")
     args = parser.parse_args()
 
     print_banner(args.port)
 
-    # Set PORT env var so web/app.py can pick it up
     env = os.environ.copy()
     env["FLASK_PORT"] = str(args.port)
 
@@ -88,25 +93,25 @@ def main():
     try:
         proc = subprocess.Popen(cmd, cwd=ROOT, env=env)
     except FileNotFoundError:
-        print(red(f"\n  ✗  Python introuvable : {PYTHON}"))
-        print(dim("     Assurez-vous que paddle_env/ existe.\n"))
+        print(red(f"\n  [X]  Python not found: {PYTHON}"))
+        print(dim("       Make sure paddle_env/ exists.\n"))
         sys.exit(1)
 
-    print(dim("  ⏳  Démarrage du serveur …"), end="", flush=True)
+    print(dim("  [*]  Starting server ..."), end="", flush=True)
 
     if wait_for_server(args.port):
         url = f"http://localhost:{args.port}"
-        print(f"\r  {green('✔  Serveur prêt')}  →  {bold(url)}           ")
+        print(f"\r  {green('[OK] Server ready')}  ->  {bold(url)}           ")
         print()
         if not args.no_browser:
             webbrowser.open(url)
     else:
-        print(f"\r  {yellow('⚠  Le serveur tarde à répondre — vérifiez la console.')}  ")
+        print(f"\r  {yellow('[!]  Server is slow to respond - check the console.')}  ")
 
     try:
         proc.wait()
     except KeyboardInterrupt:
-        print(yellow("\n\n  [arrêt demandé — au revoir !]\n"))
+        print(yellow("\n\n  [stopped - goodbye!]\n"))
         proc.terminate()
 
 if __name__ == "__main__":

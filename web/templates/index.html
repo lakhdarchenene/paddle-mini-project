@@ -43,7 +43,7 @@
           <strong>Glissez-déposez votre image ici</strong>
           <span>ou cliquez pour parcourir</span>
         </div>
-        <div class="upload-hint">PNG, JPG, JPEG, BMP, TIFF • Max 20 MB</div>
+        <div class="upload-hint">PNG, JPG, JPEG, BMP, TIFF, WEBP &bull; Max 25 MB</div>
         <button class="btn-upload" id="browseBtn">Choisir un fichier</button>
       </div>
       <input type="file" id="fileInput" accept="image/*" hidden/>
@@ -54,8 +54,19 @@
       <img id="previewImg" src="" alt="Aperçu"/>
       <div class="preview-info">
         <span id="previewName" class="preview-name"></span>
+
+        <!-- Language selector -->
+        <div class="lang-selector">
+          <label for="langSelect">🌐 Langue OCR :</label>
+          <select id="langSelect" class="select-lang">
+            {% for code, label in supported_langs.items() %}
+            <option value="{{ code }}" {% if code == 'fr' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
         <button class="btn-analyze" id="analyzeBtn">🚀 Analyser maintenant</button>
-        <button class="btn-clear" id="clearBtn">✕ Annuler</button>
+        <button class="btn-clear"   id="clearBtn">✕ Annuler</button>
       </div>
     </div>
   </section>
@@ -102,6 +113,11 @@
       <div class="stat-label">Pied de page</div>
     </div>
     <div class="stat-card">
+      <div class="stat-icon">🌐</div>
+      <div class="stat-value" id="statLang" style="font-size:1.1rem">—</div>
+      <div class="stat-label">Langue OCR</div>
+    </div>
+    <div class="stat-card" style="grid-column: span 6 / auto; padding: 10px 14px;">
       <div class="stat-icon">🕐</div>
       <div class="stat-value" id="statTime" style="font-size:0.85rem">—</div>
       <div class="stat-label">Traité le</div>
@@ -161,7 +177,7 @@
   <section class="history-section" id="historySection">
     <div class="section-header">
       <h2>🕐 Historique des analyses</h2>
-      <button class="btn-refresh" id="refreshHistory" onclick="loadHistory()">↻ Actualiser</button>
+      <button class="btn-refresh" onclick="loadHistory()">↻ Actualiser</button>
     </div>
     <div class="history-grid" id="historyGrid">
       <div class="history-empty">Aucune analyse effectuée</div>

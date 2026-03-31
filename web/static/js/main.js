@@ -1,21 +1,22 @@
-/* web/static/js/main.js — Frontend logic */
+/* web/static/js/main.js — Frontend logic v2 */
 
 // ── State ──────────────────────────────────────────────────────────────────
 let selectedFile = null;
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
-const uploadZone    = document.getElementById("uploadZone");
-const fileInput     = document.getElementById("fileInput");
-const browseBtn     = document.getElementById("browseBtn");
-const previewBox    = document.getElementById("previewBox");
-const previewImg    = document.getElementById("previewImg");
-const previewName   = document.getElementById("previewName");
-const analyzeBtn    = document.getElementById("analyzeBtn");
-const clearBtn      = document.getElementById("clearBtn");
-const loadingOverlay= document.getElementById("loadingOverlay");
-const statsBar      = document.getElementById("statsBar");
-const resultsSection= document.getElementById("resultsSection");
-const statusBadge   = document.getElementById("status-badge");
+const uploadZone     = document.getElementById("uploadZone");
+const fileInput      = document.getElementById("fileInput");
+const browseBtn      = document.getElementById("browseBtn");
+const previewBox     = document.getElementById("previewBox");
+const previewImg     = document.getElementById("previewImg");
+const previewName    = document.getElementById("previewName");
+const analyzeBtn     = document.getElementById("analyzeBtn");
+const clearBtn       = document.getElementById("clearBtn");
+const langSelect     = document.getElementById("langSelect");
+const loadingOverlay = document.getElementById("loadingOverlay");
+const statsBar       = document.getElementById("statsBar");
+const resultsSection = document.getElementById("resultsSection");
+const statusBadge    = document.getElementById("status-badge");
 
 // ── Upload zone events ─────────────────────────────────────────────────────
 browseBtn.addEventListener("click", () => fileInput.click());
@@ -27,32 +28,40 @@ fileInput.addEventListener("change", () => {
   if (fileInput.files[0]) selectFile(fileInput.files[0]);
 });
 
-uploadZone.addEventListener("dragover", (e) => {
-  e.preventDefault();
-  uploadZone.classList.add("dragover");
-});
-uploadZone.addEventListener("dragleave", () => uploadZone.classList.remove("dragover"));
-uploadZone.addEventListener("drop", (e) => {
+uploadZone.addEventListener("dragover",  (e) => { e.preventDefault(); uploadZone.classList.add("dragover"); });
+uploadZone.addEventListener("dragleave", ()  => uploadZone.classList.remove("dragover"));
+uploadZone.addEventListener("drop",      (e) => {
   e.preventDefault();
   uploadZone.classList.remove("dragover");
   if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]);
 });
 
 function selectFile(file) {
+  const allowed = ["image/png","image/jpeg","image/jpg","image/bmp","image/tiff","image/webp"];
+  if (!allowed.includes(file.type) && !file.name.match(/\.(png|jpe?g|bmp|tiff?|webp)$/i)) {
+    showToast("Format non supporté. Utilisez PNG, JPG, BMP, TIFF ou WEBP.", "error");
+    return;
+  }
+  if (file.size > 25 * 1024 * 1024) {
+    showToast("Fichier trop volumineux (max 25 Mo).", "error");
+    return;
+  }
   selectedFile = file;
   const reader = new FileReader();
-  reader.onload = (e) => { previewImg.src = e.target.result; };
+  reader.onload  = (e) => { previewImg.src = e.target.result; };
   reader.readAsDataURL(file);
   previewName.textContent = file.name + "  (" + formatSize(file.size) + ")";
-  previewBox.style.display = "flex";
-  uploadZone.style.display = "none";
+  previewBox.style.display  = "flex";
+  uploadZone.style.display  = "none";
 }
 
 clearBtn.addEventListener("click", () => {
-  selectedFile = null;
+  selectedFile  = null;
   fileInput.value = "";
-  previewBox.style.display = "none";
+  previewBox.style.display  = "none";
   uploadZone.style.display  = "block";
+  statsBar.style.display    = "none";
+  resultsSection.style.display = "none";
 });
 
 analyzeBtn.addEventListener("click", () => {
@@ -65,19 +74,14 @@ async function processFile(file) {
   showLoading(true);
   setStatus("● Analyse…", "#fbbf24");
 
-  const steps = [
-    { id: "step1", delay: 0 },
-    { id: "step2", delay: 1200 },
-    { id: "step3", delay: 2400 },
-    { id: "step4", delay: 3600 },
-  ];
-  steps.forEach(({ id, delay }) =>
-    setTimeout(() => activateStep(id), delay)
-  );
+  const stepIds = ["step1","step2","step3","step4"];
+  stepIds.forEach((id, i) => setTimeout(() => activateStep(id), i * 1300));
 
+  const lang     = langSelect ? langSelect.value : "fr";
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file",  file);
   formData.append("title", file.name.replace(/\.[^.]+$/, ""));
+  formData.append("lang",  lang);
 
   try {
     const res  = await fetch("/api/upload", { method: "POST", body: formData });
@@ -105,8 +109,9 @@ async function processFile(file) {
 
 // ── Display results ────────────────────────────────────────────────────────
 function displayResults(data) {
-  // Stats
-  const { stats, zones, upload_url, result_url, processed_at } = data;
+  const { stats, zones, upload_url, result_url, processed_at, lang } = data;
+
+  // Stats — confidence already in [0,1] from server; display as percentage
   animateCounter("statTotal",  stats.total_blocks);
   document.getElementById("statConf").textContent   = (stats.avg_confidence * 100).toFixed(1) + "%";
   animateCounter("statHeader", stats.zone_counts.header);
@@ -114,16 +119,21 @@ function displayResults(data) {
   animateCounter("statFooter", stats.zone_counts.footer);
   document.getElementById("statTime").textContent   = processed_at;
 
+  // Language badge
+  const langBadge = document.getElementById("statLang");
+  if (langBadge && lang) langBadge.textContent = lang.toUpperCase();
+
   statsBar.style.display = "grid";
 
   // Images
   document.getElementById("originalImg").src = upload_url;
   document.getElementById("resultImg").src   = result_url;
-  const dlBtn  = document.getElementById("downloadBtn");
-  dlBtn.href   = result_url;
+  const dlBtn    = document.getElementById("downloadBtn");
+  dlBtn.href     = result_url;
   dlBtn.download = "resultat_ocr.png";
 
   // Zone blocks
+  // NOTE: server already sends confidence as 0–100 (confidence * 100)
   fillZone("headerBlocks", zones.header || []);
   fillZone("bodyBlocks",   zones.body   || []);
   fillZone("footerBlocks", zones.footer || []);
@@ -139,8 +149,9 @@ function fillZone(containerId, blocks) {
     return;
   }
   el.innerHTML = blocks.map(b => {
+    // b.confidence is already 0-100 (server multiplied by 100)
     const conf      = b.confidence;
-    const confClass = conf >= 95 ? "high" : conf >= 80 ? "medium" : "low";
+    const confClass = conf >= 90 ? "high" : conf >= 75 ? "medium" : "low";
     return `
       <div class="block-item">
         <span class="block-text">${escHtml(b.text)}</span>
@@ -166,7 +177,7 @@ function activateStep(id) {
   const idx   = steps.indexOf(id);
   steps.forEach((sid, i) => {
     const el = document.getElementById(sid);
-    if (i < idx)      { el.classList.add("done"); el.classList.remove("active"); }
+    if (i < idx)       { el.classList.add("done");   el.classList.remove("active"); }
     else if (i === idx){ el.classList.add("active"); el.classList.remove("done"); }
     else               { el.classList.remove("active","done"); }
   });
@@ -185,7 +196,7 @@ async function loadHistory() {
     }
 
     grid.innerHTML = items.map(item => `
-      <div class="history-item" onclick="window.open('${item.url}','_blank')">
+      <div class="history-item" onclick="window.open('${item.url}','_blank')" title="${item.date}">
         <img src="${item.url}" alt="Résultat" loading="lazy"/>
         <div class="history-item-info">
           <div class="history-item-date">🕐 ${item.date}</div>
@@ -197,12 +208,11 @@ async function loadHistory() {
 // ── Utils ──────────────────────────────────────────────────────────────────
 function animateCounter(id, target) {
   const el    = document.getElementById(id);
-  const start = 0;
   const dur   = 600;
   const t0    = performance.now();
   const step  = (now) => {
     const p = Math.min((now - t0) / dur, 1);
-    el.textContent = Math.round(start + (target - start) * easeOut(p));
+    el.textContent = Math.round(target * easeOut(p));
     if (p < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -211,25 +221,29 @@ function animateCounter(id, target) {
 function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
 
 function formatSize(bytes) {
-  return bytes > 1e6 ? (bytes/1e6).toFixed(1)+" MB"
-       : bytes > 1e3 ? (bytes/1e3).toFixed(0)+" KB"
-       : bytes+" B";
+  return bytes > 1e6 ? (bytes / 1e6).toFixed(1) + " MB"
+       : bytes > 1e3 ? (bytes / 1e3).toFixed(0) + " KB"
+       : bytes + " B";
 }
 
 function escHtml(str) {
-  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function setStatus(text, color) {
-  statusBadge.textContent = text;
-  statusBadge.style.color = color;
+  if (statusBadge) { statusBadge.textContent = text; statusBadge.style.color = color; }
 }
 
 function showToast(msg, type = "") {
   const el = document.getElementById("toast");
-  el.textContent  = msg;
-  el.className    = `toast ${type} show`;
-  setTimeout(() => el.classList.remove("show"), 3500);
+  el.textContent = msg;
+  el.className   = `toast ${type} show`;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove("show"), 3800);
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
